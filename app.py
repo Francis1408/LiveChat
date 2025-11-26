@@ -20,7 +20,11 @@ conn = psycopg2.connect(dbname=DB_NAME, user=DB_USER, password=DB_PASS, host=DB_
 
 @app.route('/')
 def home():
-    return 'Homepage'
+    # Confere se a sessão está ativa
+    if 'loggedin' in session:
+        return render_template('home.html', username=session['username'])
+    
+    return redirect(url_for('login'))
 
 @app.route('/register', methods=['GET','POST'])
 def register():
@@ -94,6 +98,15 @@ def login():
             flash("Incorrect username/password")
     
     return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    # Remove a session data
+    session.pop('loggedin', None)
+    session.pop('id', None)
+    session.pop('username', None)
+
+    return redirect(url_for('login'))
 
 if __name__ == "__main__":
     app.run(debug=True)
