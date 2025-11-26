@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, flash
+from flask import Flask, render_template, request, flash, url_for, session, redirect
 from dotenv import load_dotenv
 import psycopg2
 import psycopg2.extras
@@ -17,16 +17,21 @@ DB_PASS = os.getenv("DB_PASS")
 
 conn = psycopg2.connect(dbname=DB_NAME, user=DB_USER, password=DB_PASS, host=DB_HOST)
 
+
+@app.route('/')
+def home():
+    return 'Homepage'
+
 @app.route('/register', methods=['GET','POST'])
 def register():
     cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
     # Confere se os campos de registro existem
-    if request.method == 'POST' and 'register_username' in request.form and 'register_password' in request.form and 'register_email' in request.form:
+    if request.method == 'POST' and 'username' in request.form and 'password' in request.form and 'email' in request.form:
         # Cria variáveis para acesso fácil
-        username = request.form['register_username']
-        password = request.form['register_password']
-        email = request.form['register_email']
+        username = request.form['username']
+        password = request.form['password']
+        email = request.form['email']
         
         # Transforma a senha em hash
         _hashed_password = generate_password_hash(password)
@@ -55,9 +60,40 @@ def register():
     elif request.method == 'POST':
         flash('Please fill out the form!')
 
-    return render_template('index.html')
-    
+    return render_template('register.html')
 
+@app.route('/login', methods=['GET','POST'])
+def login():
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+    if request.method == 'POST' and 'username' in request.form and 'password' in request.form:
+        # Cria variáveis para acesso fácil
+        username = request.form['username']
+        password = request.form['password']
+
+        # Confere se conta existe no DB
+        cursor.execute('SELECT * FROM users WHERE username = %s', (username,))
+        account = cursor.fetchone()
+
+       
+        if account:
+            password_rs = account['password']
+            # Cofere a validade da senha
+            if check_password_hash(password_rs, password):
+                # Cria session data
+                session['loggedin'] = True
+                session['id'] = account['id']
+                session['username'] = account['username']
+                # Redireciona para a homepage
+                return redirect(url_for('home'))
+
+            else:
+                flash("Incorrect username/password")
+
+        else:
+            flash("Incorrect username/password")
+    
+    return render_template('login.html')
 
 if __name__ == "__main__":
     app.run(debug=True)
