@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, flash, url_for, session, redirect
+from flask_socketio import join_room, leave_room, send, SocketIO
 from dotenv import load_dotenv
 import psycopg2
 import psycopg2.extras

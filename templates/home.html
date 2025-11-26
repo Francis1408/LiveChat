@@ -1,22 +1,20 @@
-<!DOCTYPE html>
-<html>
- <head>
-  <meta charset="utf-8">
-  <title>{% block title %}{% endblock %}</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.1/css/all.css">
- <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
- <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js"></script>
- <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
- </head>
- <body class="loggedin">
- <nav class="site-header sticky-top py-1">
-      <div class="container d-flex flex-column flex-md-row justify-content-between">
-  <a class="py-2 d-none d-md-inline-block" href="{{ url_for('home') }}"><i class="fas fa-home"></i> Home</a>
-  <a class="py-2 d-none d-md-inline-block" href=""><i class="fas fa-user-circle"></i> Profile</a>
-  <a class="py-2 d-none d-md-inline-block" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
-   </div>
-    </nav>
-   
- </body>
-</html>
+{% extends 'base.html' %} 
+{% block content %}
+<body class="loggedin">
+<nav class="site-header sticky-top py-1">
+    <div class="container d-flex flex-column flex-md-row justify-content-between">
+<a class="py-2 d-none d-md-inline-block" href="{{ url_for('home') }}"><i class="fas fa-home"></i> Home</a>
+<a class="py-2 d-none d-md-inline-block" href=""><i class="fas fa-user-circle"></i> Profile</a>
+<a class="py-2 d-none d-md-inline-block" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
+</div>
+</nav>
+
+<form method="POST">
+    <h3>Enter the Chat Room</h3>
+    <div class="join">
+        <input type="text" placeholder="Room Code" name="code" value="{{code}}">
+        <button type="submit" name="join" class="create">Join a Room</button>
+    </div>
+    <button type="submit" name="create">Create a room</button>
+</form>
+{% endblock %}
