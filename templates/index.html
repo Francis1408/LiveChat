@@ -10,7 +10,6 @@
 
     <!-- Your external CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
-
 </head>
 
 <body class="bg-gray-100 flex items-center justify-center min-h-screen">
@@ -41,7 +40,7 @@
                 <input type="password" class="input" placeholder="********" required>
             </div>
 
-            <button class="btn-login">
+            <button class="btn-login w-full">
                 Login
             </button>
         </form>
@@ -49,6 +48,18 @@
         <!-- Register Form -->
         <form id="registerForm" class="space-y-4 hidden" action="{{ url_for('register') }}" method="POST">
             <h2 class="title text-2xl font-semibold text-center mb-2">Create Account</h2>
+
+            {% with messages = get_flashed_messages() %}
+            {% if messages %}
+            <div id="flash-wrapper">
+                {% for message in messages %}
+                <div class="p-3 mb-3 rounded bg-blue-100 text-blue-700 border border-blue-300">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% endwith %}
 
             <div>
                 <label class="label">Username</label>
@@ -65,7 +76,7 @@
                 <input type="password" class="input" name="register_password" placeholder="********" required>
             </div>
 
-            <button type="submit" class="btn-register">
+            <button type="submit" class="btn-register w-full">
                 Register
             </button>
         </form>
@@ -78,6 +89,7 @@
         const loginForm = document.getElementById("loginForm");
         const registerForm = document.getElementById("registerForm");
 
+        // Switch to Login
         loginTab.onclick = () => {
             loginTab.classList.add("tab-active");
             loginTab.classList.remove("tab-inactive");
@@ -89,6 +101,7 @@
             registerForm.classList.add("hidden");
         };
 
+        // Switch to Register
         registerTab.onclick = () => {
             registerTab.classList.add("tab-active");
             registerTab.classList.remove("tab-inactive");
@@ -99,6 +112,7 @@
             registerForm.classList.remove("hidden");
             loginForm.classList.add("hidden");
         };
+
     </script>
 
 </body>

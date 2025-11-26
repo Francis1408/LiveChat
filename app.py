@@ -1,15 +1,19 @@
 from flask import Flask, render_template, request, flash
+from dotenv import load_dotenv
 import psycopg2
 import psycopg2.extras
 import re
 from werkzeug.security import generate_password_hash, check_password_hash
+import os
 
 app = Flask(__name__)
-app.secrect_key = ''
-DB_HOST = ""
-DB_NAME = ""
-DB_USER = ""
-DB_PASS = ""
+load_dotenv()
+
+app.secret_key = os.getenv("FLASK_SECRET")
+DB_HOST = os.getenv("DB_HOST")
+DB_NAME = os.getenv("DB_NAME")
+DB_USER = os.getenv("DB_USER")
+DB_PASS = os.getenv("DB_PASS")
 
 conn = psycopg2.connect(dbname=DB_NAME, user=DB_USER, password=DB_PASS, host=DB_HOST)
 
