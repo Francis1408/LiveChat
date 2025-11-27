@@ -1,11 +1,13 @@
 from flask import Flask, render_template, request, flash, url_for, session, redirect
 from flask_socketio import join_room, leave_room, send, SocketIO
 from dotenv import load_dotenv
+from string import ascii_uppercase
 import psycopg2
 import psycopg2.extras
 import re
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
+import random
 
 app = Flask(__name__)
 load_dotenv()
@@ -18,14 +20,70 @@ DB_PASS = os.getenv("DB_PASS")
 
 conn = psycopg2.connect(dbname=DB_NAME, user=DB_USER, password=DB_PASS, host=DB_HOST)
 
+# Cria um código único para a sala
+def generate_unique_code(length, cursor):
+
+    # Pega os códigos das salas existentes
+    cursor.execute("SELECT code FROM room")
+    rooms = cursor.fetchall()
+    codes = [r[0] for r in rooms]
+
+    while True:
+        code = ""
+        for _ in range(length):
+            code += random.choice(ascii_uppercase)
+
+        if code not in codes:
+            break
+    
+    return code
+
 
 @app.route('/')
 def home():
     # Confere se a sessão está ativa
-    if 'loggedin' in session:
-        return render_template('home.html', username=session['username'])
+    if not'loggedin' in session:
+        return redirect(url_for('login'))
     
-    return redirect(url_for('login'))
+    # Sempre limpa a cache da sala quando re-entra na home
+    session.pop('room', None)
+
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+    if request.method == "POST":
+        username = session['username']
+        code = request.form.get('code')
+        join = request.form.get('join', False)
+        create = request.form.get('create', False)
+
+        # Avalia se a opção foi de entrar ou criar sala
+        if join != False and not code:
+            flash('Please enter a room code')
+            return render_template('home.html', username=session['username'], code=code)
+
+        # CREATE
+        if create:
+            code = generate_unique_code(4, cursor)
+            user_id = session["id"]
+            cursor.execute("INSERT INTO room (code, owner_id) VALUES (%s, %s)", (user_id, code))
+            conn.commit()
+            flash('You have sucessfully created a room!')
+
+        # JOIN
+        else:
+            cursor.execute('SELECT * FROM room WHERE code = %s', (code,))
+            room = cursor.fetchone()
+
+            if not room:
+                flash("Room does not exist")
+                return render_template('home.html', username=session['username'], code=code)
+
+        session['room'] = code
+        # Redireciona para a sala
+        return redirect(url_for("room"))
+
+    return render_template('home.html', username=session['username'])
+
 
 @app.route('/register', methods=['GET','POST'])
 def register():
@@ -108,6 +166,10 @@ def logout():
     session.pop('username', None)
 
     return redirect(url_for('login'))
+
+@app.route("/room")
+def room():
+    return render_template("room.html")
 
 if __name__ == "__main__":
     app.run(debug=True)
