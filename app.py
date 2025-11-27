@@ -39,7 +39,7 @@ def generate_unique_code(length, cursor):
     return code
 
 
-@app.route('/')
+@app.route('/', methods=['GET','POST'])
 def home():
     # Confere se a sessão está ativa
     if not'loggedin' in session:
@@ -56,21 +56,24 @@ def home():
         join = request.form.get('join', False)
         create = request.form.get('create', False)
 
-        # Avalia se a opção foi de entrar ou criar sala
-        if join != False and not code:
-            flash('Please enter a room code')
-            return render_template('home.html', username=session['username'], code=code)
-
         # CREATE
-        if create:
+        if create != False:
             code = generate_unique_code(4, cursor)
             user_id = session["id"]
-            cursor.execute("INSERT INTO room (code, owner_id) VALUES (%s, %s)", (user_id, code))
+            cursor.execute("INSERT INTO room (code, owner_id) VALUES (%s, %s)", (code, user_id))
             conn.commit()
+
+            session['room'] = code
             flash('You have sucessfully created a room!')
+            return redirect(url_for("room"))
 
         # JOIN
-        else:
+        if join != False:
+
+            if not code:
+                flash('Please enter a room code')
+                return render_template('home.html', username=session['username'], code=code)
+
             cursor.execute('SELECT * FROM room WHERE code = %s', (code,))
             room = cursor.fetchone()
 
@@ -78,9 +81,8 @@ def home():
                 flash("Room does not exist")
                 return render_template('home.html', username=session['username'], code=code)
 
-        session['room'] = code
-        # Redireciona para a sala
-        return redirect(url_for("room"))
+            session['room'] = code
+            return redirect(url_for("room"))
 
     return render_template('home.html', username=session['username'])
 
@@ -164,11 +166,16 @@ def logout():
     session.pop('loggedin', None)
     session.pop('id', None)
     session.pop('username', None)
+    session.pop('room', None)
 
     return redirect(url_for('login'))
 
 @app.route("/room")
 def room():
+    # Garante que a sessão está ativa
+    if not'loggedin' in session or session.get("room") is None:
+        return redirect(url_for("home"))
+
     return render_template("room.html")
 
 if __name__ == "__main__":
