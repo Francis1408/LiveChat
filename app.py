@@ -2,12 +2,16 @@ from flask import Flask, render_template, request, flash, url_for, session, redi
 from flask_socketio import join_room, leave_room, send, SocketIO
 from dotenv import load_dotenv
 from string import ascii_uppercase
+from init_db import init_db
 import psycopg2
 import psycopg2.extras
 import re
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import random
+
+# Garante que o BD exista antes da execução
+init_db()
 
 app = Flask(__name__)
 socketio = SocketIO(app)
@@ -308,4 +312,4 @@ def disconnect():
     
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    socketio.run(app, debug=True)
