@@ -172,11 +172,42 @@ def logout():
 
 @app.route("/room")
 def room():
+    room = session.get("room")
     # Garante que a sessão está ativa
-    if not'loggedin' in session or session.get("room") is None:
-        return redirect(url_for("home"))
+    if not'loggedin' in session or room is None:
+        return redirect(url_for("home"), code=room)
 
-    return render_template("room.html")
+    return render_template("room.html", code=room)
+
+
+@socketio.on("message")
+def message(data):
+    room_code = session.get("room")
+    user_id = session.get("id")
+
+    # Se possui um código de sala mas ele não é válido
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cursor.execute('SELECT * FROM room WHERE code = %s', (room_code,))
+    room = cursor.fetchone()
+
+    if not room:
+        return
+    
+    # Pega o room_id
+    room_id = room['id']
+    
+    # Envia conteudo para o socket
+    content = {
+        "name": session.get("username"),
+        "message": data["data"]
+    }
+    send(content, to=room_code)
+
+    # Salva mensagem no BD
+    cursor.execute("INSERT INTO messages (room_id, user_id, content) VALUES (%s, %s, %s)", (room_id, user_id, data["data"]))
+    conn.commit()
+    print(f"{session.get('username')} said: {data['data']}")
+
 
 @socketio.on("connect")
 def connect(auth):

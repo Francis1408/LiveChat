@@ -39,8 +39,12 @@
     createMessage(data.name, data.message);
   });
 
+  // Passa para a o metodo "message" no backend o content da mensagem
   const sendMessage = () => {
-    console.log("send");
+    const message = document.getElementById("message")
+    if (message.value == "") return;
+    socketio.emit("message", {data: message.value});
+    message.value = "";
   };
 
 </script>
