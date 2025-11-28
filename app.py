@@ -205,7 +205,48 @@ def connect(auth):
     # Cadastra usuário na sala
     cursor.execute("INSERT INTO room_members (room_id, user_id) VALUES (%s, %s)", (room_id, user_id))
     conn.commit()
-    print(f"{username} joined room {room}")
+    print(f"{username} joined room {room_code}")
+
+@socketio.on("disconnect")
+def disconnect():
+    room_code = session.get("room")
+    username = session.get("username")
+    user_id = session.get("id")
+
+    if not room_code:
+        return
+ 
+    # Se possui um código de sala mas ele não é válido
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cursor.execute('SELECT * FROM room WHERE code = %s', (room_code,))
+    room = cursor.fetchone()
+
+    if not room:
+        return
+    
+    # Pega o room_id
+    room_id = room['id']
+
+    # Notifica que o usuário saiu da sala
+    send({"name": username, "message": "has left the room"}, to=room_code)
+
+    # Remove registro do usuário da sala
+    cursor.execute('DELETE FROM room_members WHERE room_id = %s AND user_id = %s', (room_id, user_id))
+    conn.commit()
+    
+    # Confere se ela possui usuários ativos, se não, remove-a
+    cursor.execute('SELECT * FROM room_members WHERE room_id = %s', (room_id,))
+    members = cursor.fetchall()
+
+    if len(members) == 0:
+        # Deleta a sala
+        cursor.execute('DELETE FROM room WHERE id = %s', (room_id,))
+        conn.commit()
+        print(f"Room {room_code} deleted")
+
+    leave_room(room_code)
+    print(f"{username} left room {room_code}")
+    
 
 if __name__ == "__main__":
     app.run(debug=True)
