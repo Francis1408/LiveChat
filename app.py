@@ -172,12 +172,40 @@ def logout():
 
 @app.route("/room")
 def room():
-    room = session.get("room")
+    room_code = session.get("room")
     # Garante que a sessão está ativa
-    if not'loggedin' in session or room is None:
-        return redirect(url_for("home"), code=room)
+    if not'loggedin' in session or room_code is None:
+        return redirect(url_for("home"), code=room_code)
+    
+    # Se possui um código de sala mas ele não é válido
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cursor.execute('SELECT * FROM room WHERE code = %s', (room_code,))
+    room = cursor.fetchone()
 
-    return render_template("room.html", code=room)
+    if not room:
+        return
+    
+    # Pega o room_id
+    room_id = room['id']
+    
+    # Recupera todas as mensagens + usuario da sala no DB
+    cursor.execute("""
+        SELECT users.username, messages.content
+        FROM messages
+        JOIN users ON messages.user_id = users.id
+        WHERE messages.room_id = %s
+        ORDER BY messages.id ASC
+    """, (room_id,))
+    
+    messages = cursor.fetchall()
+
+    # Constroi a lista de dict para o template
+    formatted_messages = [
+        {"name": msg["username"], "message": msg["content"]}
+        for msg in messages
+    ]
+
+    return render_template("room.html", code=room_code, messages=formatted_messages)
 
 
 @socketio.on("message")
