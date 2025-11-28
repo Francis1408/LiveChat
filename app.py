@@ -10,6 +10,7 @@ import os
 import random
 
 app = Flask(__name__)
+socketio = SocketIO(app)
 load_dotenv()
 
 app.secret_key = os.getenv("FLASK_SECRET")
@@ -51,7 +52,6 @@ def home():
     cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
     if request.method == "POST":
-        username = session['username']
         code = request.form.get('code')
         join = request.form.get('join', False)
         create = request.form.get('create', False)
@@ -177,6 +177,35 @@ def room():
         return redirect(url_for("home"))
 
     return render_template("room.html")
+
+@socketio.on("connect")
+def connect(auth):
+    room_code = session.get("room")
+    username = session.get("username")
+    user_id = session.get("id")
+
+    if not room_code:
+        return
+    
+    # Se possui um código de sala mas ele não é válido
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cursor.execute('SELECT * FROM room WHERE code = %s', (room_code,))
+    room = cursor.fetchone()
+
+    if not room:
+        leave_room(room_code)
+        return
+    
+    # Pega o room_id
+    room_id = room['id']
+    
+    # Entra no socket da sala
+    join_room(room_code)
+    send({"name": username, "message": "has entered the room"}, to=room_code)
+    # Cadastra usuário na sala
+    cursor.execute("INSERT INTO room_members (room_id, user_id) VALUES (%s, %s)", (room_id, user_id))
+    conn.commit()
+    print(f"{username} joined room {room}")
 
 if __name__ == "__main__":
     app.run(debug=True)
