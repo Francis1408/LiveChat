@@ -1,77 +1,86 @@
-
-<!DOCTYPE html>
-<html>
- <head>
-  <meta charset="utf-8">
-  <title>Register</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.1/css/all.css">
-  <!-- Google Fonts -->
-  <link href='https://fonts.googleapis.com/css?family=Passion+One' rel='stylesheet' type='text/css'>
-  <link href='https://fonts.googleapis.com/css?family=Oxygen' rel='stylesheet' type='text/css'>
-  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
- </head>
- <body style="background-color:#ccc;">
- <div class="container">
-   <div class="row main">
-    <div class="main-login main-center">
-    <h5>Register New user or login existing account</h5>
-     <form action="{{ url_for('register') }}" method="post" autocomplete="off"> 
-        
-      <div class="form-group">
-       <label for="username" class="cols-sm-2 control-label">Username</label>
-       <div class="cols-sm-10">
-        <div class="input-group">
-         <span class="input-group-addon"><i class="fa fa-users fa" aria-hidden="true"></i></span>
-         <input type="text" class="form-control" name="username" id="username" placeholder="Enter your Username" required>
-        </div>
-       </div>
-      </div>
-        
-      <div class="form-group">
-       <label for="email" class="cols-sm-2 control-label">Your Email</label>
-       <div class="cols-sm-10">
-        <div class="input-group">
-         <span class="input-group-addon"><i class="fa fa-envelope fa" aria-hidden="true"></i></span>
-         <input type="text" class="form-control" name="email" id="email"  placeholder="Enter your Email"/>
-        </div>
-       </div>
-      </div>
-  
-      <div class="form-group">
-       <label for="password" class="cols-sm-2 control-label">Password</label>
-       <div class="cols-sm-10">
-        <div class="input-group">
-         <span class="input-group-addon"><i class="fa fa-lock fa-lg" aria-hidden="true"></i></span>
-         <input type="password" class="form-control" name="password" placeholder="Password" id="password" required  placeholder="Enter your Password"/>
-        </div>
-       </div>
-      </div>
-  
-      <div class="form-group ">
-        {% with messages = get_flashed_messages()  %}
-        {% if messages %}
-        {% for message in messages %}
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-          {{ message }}
-          <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-            <span aria-hidden="true">×</span>
-          </button>
-        </div>
-        {% endfor %}
-        {% endif %}
-        {% endwith %}
-       <input type="submit" value="Register" class="form-control btn btn-primary " name="">
-       <p style="padding:5px;">
-       <a href="{{ url_for('login') }}" class="btn btn-dark ">Login</a></p>
-        
-      </div>
-        
-     </form>
+{% extends 'base.html' %}
+{% block content %}
+<div class="flex items-center justify-center min-h-screen">
+  <div class="glass p-8 rounded-2xl shadow-2xl w-full max-w-md border border-gray-700">
+    <div class="text-center mb-8">
+      <h2 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500">Create
+        Account</h2>
+      <p class="text-gray-400 mt-2">Join our community today</p>
     </div>
-   </div>
+
+    <form action="{{ url_for('register') }}" method="post" class="space-y-6">
+      <!-- Full Name Input -->
+      <div>
+        <label class="block text-sm font-medium text-gray-300 mb-1">Full Name</label>
+        <div class="relative">
+          <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">
+            <i class="fas fa-user"></i>
+          </span>
+          <input type="text" name="fullname" required
+            class="w-full pl-10 pr-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition duration-200"
+            placeholder="Enter your full name">
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-300 mb-1">Username</label>
+        <div class="relative">
+          <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">
+            <i class="fas fa-user"></i>
+          </span>
+          <input type="text" name="username" required
+            class="w-full pl-10 pr-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition duration-200"
+            placeholder="Choose a username">
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-300 mb-1">Email Address</label>
+        <div class="relative">
+          <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">
+            <i class="fas fa-envelope"></i>
+          </span>
+          <input type="email" name="email" required
+            class="w-full pl-10 pr-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition duration-200"
+            placeholder="name@example.com">
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-300 mb-1">Password</label>
+        <div class="relative">
+          <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">
+            <i class="fas fa-lock"></i>
+          </span>
+          <input type="password" name="password" required
+            class="w-full pl-10 pr-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition duration-200"
+            placeholder="Create a strong password">
+        </div>
+      </div>
+
+      <button type="submit"
+        class="w-full py-3 px-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-lg shadow-md transform hover:scale-[1.02] transition duration-200">
+        Sign Up
+      </button>
+    </form>
+
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+    <div class="mt-4 space-y-2">
+      {% for message in messages %}
+      <div class="p-3 rounded-lg bg-blue-500/20 border border-blue-500/50 text-blue-200 text-sm text-center">
+        {{ message }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <p class="mt-6 text-center text-gray-400 text-sm">
+      Already have an account?
+      <a href="{{ url_for('login') }}"
+        class="text-purple-400 hover:text-purple-300 font-medium transition duration-200">Login</a>
+    </p>
   </div>
- <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js"></script>
- <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>  
- </body>
-</html>
+</div>
+{% endblock %}
