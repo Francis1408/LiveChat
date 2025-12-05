@@ -4,8 +4,8 @@
 DB_CONTAINER_NAME="postgres_alpine"
 DB_PASSWORD="postgres"
 DB_PORT="5432"
-AUTH_PORT="5000"
-CHAT_PORT="5001"
+AUTH_PORT="5002"
+CHAT_PORT="5003"
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -39,16 +39,20 @@ sleep 3 # Give it a moment to start up
 # 2. Initialize Database
 echo -e "${GREEN}[2/5] Initializing Database...${NC}"
 export DB_HOST=localhost DB_NAME=postgres DB_USER=postgres DB_PASS=postgres FLASK_SECRET=dev_secret
+export AUTH_SERVICE_URL="http://127.0.0.1:$AUTH_PORT"
+export CHAT_SERVICE_URL="http://127.0.0.1:$CHAT_PORT"
 python3 init_db.py
 
 # 3. Start Services
 echo -e "${GREEN}[3/5] Starting Auth Service...${NC}"
-python3 services/auth_service.py > auth_service.log 2>&1 &
+echo -e "${GREEN}[3/5] Starting Auth Service...${NC}"
+PORT=$AUTH_PORT python3 services/auth_service.py > auth_service.log 2>&1 &
 AUTH_PID=$!
 echo "Auth Service started (PID: $AUTH_PID)"
 
 echo -e "${GREEN}[4/5] Starting Chat Service...${NC}"
-python3 services/chat_service.py > chat_service.log 2>&1 &
+echo -e "${GREEN}[4/5] Starting Chat Service...${NC}"
+PORT=$CHAT_PORT python3 services/chat_service.py > chat_service.log 2>&1 &
 CHAT_PID=$!
 echo "Chat Service started (PID: $CHAT_PID)"
 

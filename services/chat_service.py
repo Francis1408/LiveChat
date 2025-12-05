@@ -13,7 +13,7 @@ app = Flask(__name__, template_folder="../templates", static_folder="../static")
 app.secret_key = os.getenv("FLASK_SECRET", "secret")
 socketio = SocketIO(app)
 
-AUTH_SERVICE_URL = "http://127.0.0.1:5000"
+AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://127.0.0.1:5000")
 
 def generate_unique_code(length, cursor):
     cursor.execute("SELECT code FROM room")
@@ -62,7 +62,9 @@ def home():
         if create != False:
             code = generate_unique_code(4, cursor)
             user_id = session["id"]
-            cursor.execute("INSERT INTO room (code, owner_id) VALUES (%s, %s)", (code, user_id))
+            cursor.execute("INSERT INTO room (code, owner_id) VALUES (%s, %s) RETURNING id", (code, user_id))
+            room_id = cursor.fetchone()[0]
+            cursor.execute("INSERT INTO room_members (room_id, user_id) VALUES (%s, %s)", (room_id, user_id))
             conn.commit()
             session['room'] = code
             flash('You have sucessfully created a room!')
@@ -84,11 +86,32 @@ def home():
                 return render_template('home.html', username=session['username'], code=code)
 
             session['room'] = code
+            
+            # Add to room_members immediately
+            room_id = room['id']
+            user_id = session['id']
+            cursor.execute("SELECT * FROM room_members WHERE room_id = %s AND user_id = %s", (room_id, user_id))
+            if not cursor.fetchone():
+                cursor.execute("INSERT INTO room_members (room_id, user_id) VALUES (%s, %s)", (room_id, user_id))
+                conn.commit()
+
             conn.close()
             return redirect(url_for("room"))
 
+            return redirect(url_for("room"))
+
+    # Fetch user's rooms
+    user_id = session['id']
+    cursor.execute("""
+        SELECT room.code, room.name 
+        FROM room 
+        JOIN room_members ON room.id = room_members.room_id 
+        WHERE room_members.user_id = %s
+    """, (user_id,))
+    rooms = cursor.fetchall()
+
     conn.close()
-    return render_template('home.html', username=session['username'])
+    return render_template('home.html', username=session['username'], rooms=rooms)
 
 @app.route("/room")
 def room():
@@ -213,16 +236,17 @@ def disconnect():
 
     send({"name": username, "message": "has left the room"}, to=room_code)
 
-    cursor.execute('DELETE FROM room_members WHERE room_id = %s AND user_id = %s', (room_id, user_id))
-    conn.commit()
+    # Do not delete from room_members to ensure persistence
+    # cursor.execute('DELETE FROM room_members WHERE room_id = %s AND user_id = %s', (room_id, user_id))
+    # conn.commit()
     
-    cursor.execute('SELECT * FROM room_members WHERE room_id = %s', (room_id,))
-    members = cursor.fetchall()
+    # cursor.execute('SELECT * FROM room_members WHERE room_id = %s', (room_id,))
+    # members = cursor.fetchall()
 
-    if len(members) == 0:
-        cursor.execute('DELETE FROM room WHERE id = %s', (room_id,))
-        conn.commit()
-        print(f"Room {room_code} deleted")
+    # if len(members) == 0:
+    #     cursor.execute('DELETE FROM room WHERE id = %s', (room_id,))
+    #     conn.commit()
+    #     print(f"Room {room_code} deleted")
 
     leave_room(room_code)
     conn.close()
@@ -234,4 +258,6 @@ def logout():
     return redirect(f"{AUTH_SERVICE_URL}/logout")
 
 if __name__ == "__main__":
-    socketio.run(app, debug=True, port=5001, allow_unsafe_werkzeug=True)
+    port = int(os.getenv("PORT", 5001))
+    socketio.run(app, debug=False, port=port, allow_unsafe_werkzeug=True)
+    # app.run(debug=True, port=port)

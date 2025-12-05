@@ -11,7 +11,7 @@ except ImportError:
 app = Flask(__name__, template_folder="../templates", static_folder="../static")
 app.secret_key = os.getenv("FLASK_SECRET", "secret")
 
-CHAT_SERVICE_URL = "http://127.0.0.1:5001"
+CHAT_SERVICE_URL = os.getenv("CHAT_SERVICE_URL", "http://127.0.0.1:5001")
 
 @app.route('/', methods=['GET'])
 def home():
@@ -97,4 +97,5 @@ def logout():
     return redirect(url_for('login'))
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    port = int(os.getenv("PORT", 5000))
+    app.run(debug=True, port=port)

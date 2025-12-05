@@ -67,6 +67,38 @@
         </form>
       </div>
 
+      <!-- Your Conversations -->
+      <div class="col-span-1 md:col-span-2 glass p-8 rounded-2xl border border-gray-700">
+        <h3 class="text-2xl font-bold mb-6 flex items-center">
+          <i class="fas fa-comments text-blue-500 mr-3"></i> Your Conversations
+        </h3>
+
+        {% if rooms %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {% for room in rooms %}
+          <div
+            class="bg-gray-800/50 p-4 rounded-xl border border-gray-700 hover:border-blue-500/50 transition flex justify-between items-center group">
+            <div>
+              <div class="font-bold text-lg text-white">{{ room['code'] }}</div>
+              <div class="text-sm text-gray-400">Room Code</div>
+            </div>
+            <form method="POST" action="{{ url_for('home') }}">
+              <input type="hidden" name="code" value="{{ room['code'] }}">
+              <button type="submit" name="join" value="true"
+                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold shadow opacity-0 group-hover:opacity-100 transition-opacity">
+                Open
+              </button>
+            </form>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-8 text-gray-500">
+          <p>You haven't joined any rooms yet.</p>
+        </div>
+        {% endif %}
+      </div>
+
     </div>
   </div>
 

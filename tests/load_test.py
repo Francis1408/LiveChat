@@ -2,33 +2,45 @@ import threading
 import time
 import socketio
 import requests
-import sys
-import os
+import re
+import random
 
-# Ensure services are running before running this test!
+# Configuration
+AUTH_URL = "http://127.0.0.1:5002"
+CHAT_URL = "http://127.0.0.1:5003"
+NUM_USERS = 10
+MESSAGES_PER_USER = 5
 
-AUTH_URL = "http://localhost:5000"
-CHAT_URL = "http://localhost:5001"
+# Global coordination
+ROOM_CODE = None
+START_EVENT = threading.Event()
+ALL_THREADS_FINISHED = threading.Event()
 
 def simulate_user(user_id):
+    global ROOM_CODE
+    
+    # Initialize SocketIO Client
     sio = socketio.Client()
     username = f"loaduser_{user_id}"
     password = "password123"
     email = f"{username}@example.com"
-
+    
     session = requests.Session()
+    
+    print(f"[{user_id}] Starting...")
 
-    # Register
+    # 1. Register (ignore if already exists)
     try:
         session.post(f"{AUTH_URL}/register", data={
             "username": username,
             "password": password,
-            "email": email
+            "email": email,
+            "fullname": f"Load User {user_id}"
         })
-    except Exception as e:
-        print(f"User {user_id}: Register failed (might exist) - {e}")
+    except Exception:
+        pass # User might already exist
 
-    # Login
+    # 2. Login
     try:
         res = session.post(f"{AUTH_URL}/login", data={
             "username": username,
@@ -36,63 +48,86 @@ def simulate_user(user_id):
         }, allow_redirects=False)
         
         if 'sso?token=' not in res.headers.get('Location', ''):
-            print(f"User {user_id}: Login failed")
+            print(f"[{user_id}] Login failed. Status: {res.status_code}")
+            print(f"[{user_id}] Headers: {res.headers}")
+            # print(f"[{user_id}] Content: {res.text}")
             return
 
         sso_url = res.headers['Location']
         
-        # SSO to Chat
+        # 3. SSO to Chat Service (gets the session cookie for chat)
+        # Clear cookies to avoid conflict between Auth and Chat service cookies on localhost
+        session.cookies.clear()
         res = session.get(sso_url)
         
-        # Create/Join Room (Hardcoded room for load test)
-        room_code = "LOAD"
-        # Try to create (ignore if exists)
-        session.post(f"{CHAT_URL}/", data={"create": "true"}) 
-        # Actually we need to capture the code if we create it.
-        # Simplification: User 1 creates, others join.
-        
+        # 4. Create or Join Room
         if user_id == 0:
-            # Create room
+            # User 0 creates the room
+            print(f"[{user_id}] Creating room...")
             res = session.post(f"{CHAT_URL}/", data={"create": "true"})
-            # We need to extract code or just define a fixed code in DB for testing.
-            # For this test, let's just assume we join a room "ABCD" if we can't easily extract.
-            # Or better, let's just use the 'room' session variable if the server sets it.
-            # But `requests` session cookie jar handles it.
+            
+            # Extract Room Code from HTML
+            match = re.search(r'Room: <span.*?>(.*?)</span>', res.text)
+            if match:
+                ROOM_CODE = match.group(1)
+                print(f"[{user_id}] Room created: {ROOM_CODE}")
+                START_EVENT.set() # Signal other threads
+            else:
+                print(f"[{user_id}] Failed to extract room code")
+                print(f"[{user_id}] Response URL: {res.url}")
+                # print(f"[{user_id}] Response Text: {res.text}")
+                return
         else:
-            # Join room (assuming User 0 created one or we use a known one)
-            # This is tricky without coordination.
+            # Other users wait for room code
+            print(f"[{user_id}] Waiting for room code...")
+            START_EVENT.wait()
+            
+            # Join the room
+            session.post(f"{CHAT_URL}/", data={"join": "true", "code": ROOM_CODE})
+            # print(f"[{user_id}] Joined room {ROOM_CODE}")
+
+        # 5. Connect via SocketIO
+        # We must pass the 'session' cookie from the requests session
+        chat_cookie = session.cookies.get('session')
+        if not chat_cookie:
+            print(f"[{user_id}] No session cookie found for Chat Service")
+            return
+
+        # Connect
+        sio.connect(CHAT_URL, headers={'Cookie': f"session={chat_cookie}"})
+        
+        # Define events
+        @sio.on('message')
+        def on_message(data):
+            # print(f"[{user_id}] Received: {data}")
             pass
 
-        # SocketIO Connection
-        # We need to pass the session cookie to SocketIO
-        # python-socketio client doesn't easily share requests session cookies unless we extract them.
-        
-        cookies = session.cookies.get_dict()
-        # Convert to format expected by socketio if needed, or just pass as headers?
-        # SocketIO client usually takes headers.
-        
-        # Actually, Flask-SocketIO uses the Flask session which is signed in the cookie.
-        # We just need to pass the 'session' cookie.
-        
-        headers = {}
-        # sio.connect(CHAT_URL, headers=headers, namespaces=['/'])
-        # But we need the cookie.
-        # sio.connect(CHAT_URL, headers={'Cookie': f"session={cookies.get('session')}"})
-        
-        # Note: This might be flaky if the server expects specific cookie format.
-        
-        print(f"User {user_id}: Ready to connect socket")
-        
+        # 6. Send Messages
+        for i in range(MESSAGES_PER_USER):
+            msg = f"Hello from {username} ({i+1}/{MESSAGES_PER_USER})"
+            sio.emit('message', {'data': msg})
+            # print(f"[{user_id}] Sent: {msg}")
+            time.sleep(random.uniform(0.1, 0.5))
+
+        # Disconnect
+        sio.disconnect()
+        print(f"[{user_id}] Finished")
+
     except Exception as e:
-        print(f"User {user_id}: Error - {e}")
+        print(f"[{user_id}] Error: {e}")
 
-threads = []
-for i in range(10):
-    t = threading.Thread(target=simulate_user, args=(i,))
-    threads.append(t)
-    t.start()
+if __name__ == "__main__":
+    print(f"Starting load test with {NUM_USERS} users...")
+    
+    threads = []
+    for i in range(NUM_USERS):
+        t = threading.Thread(target=simulate_user, args=(i,))
+        threads.append(t)
+        t.start()
+        # Stagger start slightly to avoid overwhelming auth service instantly
+        time.sleep(0.1)
 
-for t in threads:
-    t.join()
+    for t in threads:
+        t.join()
 
-print("Load test finished")
+    print("Load test completed.")
