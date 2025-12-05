@@ -1,0 +1,44 @@
+@startuml
+skinparam componentStyle uml2
+skinparam backgroundColor white
+skinparam handwritten false
+
+title Arquitetura do Sistema 
+
+actor "Cliente / Navegador" as Client
+
+node "Infraestrutura" {
+    component "Nginx Load Balancer\n(Porta 8080)" as Nginx
+}
+
+package "Microserviços" {
+    component "Auth Service\n(Porta 5002)" as Auth
+    component "Chat Service 1\n(Porta 5003)" as Chat1
+    component "Chat Service 2\n(Porta 5004)" as Chat2
+}
+
+database "Camada de Dados" {
+    database "Redis\n(Message Queue & Cache)" as Redis
+    database "PostgreSQL\n(Persistência)" as Postgres
+}
+
+' Conexões
+Client --> Nginx : HTTP / WebSocket
+Nginx --> Auth : /login, /register
+Nginx --> Chat1 : /socket.io, /room
+Nginx --> Chat2 : /socket.io, /room
+
+Auth --> Postgres : Autenticação & Registro
+
+Chat1 <--> Redis : Pub/Sub & Active Users
+Chat2 <--> Redis : Pub/Sub & Active Users
+
+Chat1 --> Postgres : Histórico de Mensagens
+Chat2 --> Postgres : Histórico de Mensagens
+
+note right of Redis
+  Permite comunicação em tempo real
+  entre instâncias diferentes
+end note
+
+@enduml
