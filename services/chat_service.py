@@ -15,6 +15,10 @@ socketio = SocketIO(app)
 
 AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://127.0.0.1:5000")
 
+# Track online users: {room_code: {username: status}}
+# For this demo, we just track presence.
+online_users = {}
+
 def generate_unique_code(length, cursor):
     cursor.execute("SELECT code FROM room")
     rooms = cursor.fetchall()
@@ -211,6 +215,15 @@ def connect(auth):
         conn.commit()
         
     conn.close()
+    
+    # Update online users
+    if room_code not in online_users:
+        online_users[room_code] = set()
+    online_users[room_code].add(username)
+    
+    # Emit update to room
+    socketio.emit('update_users', {'users': list(online_users[room_code])}, room=room_code)
+    
     print(f"{username} joined room {room_code}")
 
 @socketio.on("disconnect")
@@ -250,6 +263,15 @@ def disconnect():
 
     leave_room(room_code)
     conn.close()
+    
+    # Update online users
+    if room_code in online_users:
+        online_users[room_code].discard(username)
+        if len(online_users[room_code]) == 0:
+            del online_users[room_code]
+        else:
+            socketio.emit('update_users', {'users': list(online_users[room_code])}, room=room_code)
+
     print(f"{username} left room {room_code}")
 
 @app.route('/logout')
