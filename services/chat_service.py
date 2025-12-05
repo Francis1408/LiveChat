@@ -234,4 +234,4 @@ def logout():
     return redirect(f"{AUTH_SERVICE_URL}/logout")
 
 if __name__ == "__main__":
-    socketio.run(app, debug=True, port=5001)
+    socketio.run(app, debug=True, port=5001, allow_unsafe_werkzeug=True)

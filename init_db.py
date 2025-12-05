@@ -46,5 +46,6 @@ def init_db():
     print("DB Tables ensured (created if missing)")
 
 
-    if __name__ == "__main__":
-        init_db()
+
+if __name__ == "__main__":
+    init_db()
