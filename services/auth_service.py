@@ -50,7 +50,7 @@ def register():
         else:
             cursor.execute("INSERT INTO users (fullname, username, password, email) VALUES (%s, %s, %s, %s)", (fullname, username, _hashed_password, email))
             conn.commit()
-            flash('You have sucessfully registered!')
+            flash('You have sucessfully registered!', 'success')
             return redirect(url_for('login'))
     
     elif request.method == 'POST':

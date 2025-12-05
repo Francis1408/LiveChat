@@ -1,6 +1,7 @@
 import psycopg2
 import os
 from dotenv import load_dotenv
+import redis
 
 def reset_db():
     """
@@ -32,6 +33,19 @@ def reset_db():
 
         cursor.close()
         conn.close()
+        
+        # Reset Redis
+        REDIS_URL = os.getenv("REDIS_URL")
+        if REDIS_URL:
+            print(f"Connecting to Redis at {REDIS_URL}...")
+            try:
+                r = redis.from_url(REDIS_URL)
+                r.flushdb()
+                print("SUCCESS: Redis flushed.")
+            except Exception as e:
+                print("ERROR flushing Redis:", e)
+        else:
+            print("Redis URL not set, skipping Redis flush.")
 
     except Exception as e:
         print("ERROR resetting database:", e)
