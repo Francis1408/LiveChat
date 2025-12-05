@@ -5,8 +5,9 @@ import sys
 import time
 import threading
 
+BASE_URL = "http://127.0.0.1:8080"
 AUTH_URL = "http://127.0.0.1:5002"
-CHAT_URL = "http://127.0.0.1:5003"
+CHAT_URL = BASE_URL
 
 # Global state for verification
 updates_received = []
@@ -59,7 +60,7 @@ def verify_active_users():
 
     print("User A connecting...")
     try:
-        sio_a.connect(CHAT_URL, headers={'Cookie': f"session={session_a.cookies.get('session')}"}, wait_timeout=10, transports=['polling'])
+        sio_a.connect(BASE_URL, headers={'Cookie': f"session={session_a.cookies.get('session')}"}, transports=['websocket'], wait=True, namespaces=['/'])
         print("User A connected")
     except Exception as e:
         print(f"User A connection failed: {e}")
@@ -83,7 +84,13 @@ def verify_active_users():
     
     # User B connect
     sio_b = socketio.Client(logger=True, engineio_logger=True)
-    sio_b.connect(CHAT_URL, headers={'Cookie': f"session={session_b.cookies.get('session')}"}, transports=['polling'])
+    
+    try:
+        sio_b.connect(BASE_URL, headers={'Cookie': f"session={session_b.cookies.get('session')}"}, transports=['websocket'], wait=True, namespaces=['/'])
+        print("User B connected")
+    except Exception as e:
+        print(f"User B connection failed: {e}")
+        sys.exit(1)
 
     # Wait for update (User A + User B)
     print("Waiting for update after User B join...")

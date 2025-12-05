@@ -9,6 +9,7 @@
         <i class="fas fa-comments text-blue-500 mr-3"></i>
         Room: <span class="font-mono ml-2 text-blue-400">{{code}}</span>
       </h2>
+      <div class="text-xs text-gray-500 mt-2">Server Port: {{server_port}}</div>
     </div>
 
     <div class="flex-grow p-6 overflow-y-auto">
@@ -57,7 +58,7 @@
 </div>
 
 <script type="text/javascript">
-  var socketio = io();
+  var socketio = io({ transports: ['websocket'] });
   const messages = document.getElementById("messages");
 
   const createMessage = (name, msg) => {

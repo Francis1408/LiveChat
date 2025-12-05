@@ -11,7 +11,24 @@ except ImportError:
 
 app = Flask(__name__, template_folder="../templates", static_folder="../static")
 app.secret_key = os.getenv("FLASK_SECRET", "secret")
-socketio = SocketIO(app)
+app.secret_key = os.getenv("FLASK_SECRET", "secret")
+
+# Configure Redis for message queue if available
+REDIS_URL = os.getenv("REDIS_URL")
+if REDIS_URL:
+    print(f"Using Redis Message Queue: {REDIS_URL}")
+    socketio = SocketIO(app, message_queue=REDIS_URL, cors_allowed_origins="*")
+else:
+    print("Using in-memory SocketIO (No Redis)")
+    socketio = SocketIO(app, cors_allowed_origins="*")
+
+import redis
+
+# Initialize Redis Client for storage (separate from Message Queue)
+if REDIS_URL:
+    redis_client = redis.from_url(REDIS_URL)
+else:
+    redis_client = None
 
 AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://127.0.0.1:5000")
 
@@ -154,7 +171,9 @@ def room():
     ]
     
     conn.close()
-    return render_template("room.html", code=room_code, messages=formatted_messages)
+    
+    server_port = os.getenv("PORT", "Unknown")
+    return render_template("room.html", code=room_code, messages=formatted_messages, server_port=server_port)
 
 @socketio.on("message")
 def message(data):
@@ -217,12 +236,17 @@ def connect(auth):
     conn.close()
     
     # Update online users
-    if room_code not in online_users:
-        online_users[room_code] = set()
-    online_users[room_code].add(username)
+    if redis_client:
+        redis_client.sadd(f"room:{room_code}:users", username)
+        users = [u.decode('utf-8') for u in redis_client.smembers(f"room:{room_code}:users")]
+    else:
+        if room_code not in online_users:
+            online_users[room_code] = set()
+        online_users[room_code].add(username)
+        users = list(online_users[room_code])
     
     # Emit update to room
-    socketio.emit('update_users', {'users': list(online_users[room_code])}, room=room_code)
+    socketio.emit('update_users', {'users': users}, room=room_code)
     
     print(f"{username} joined room {room_code}")
 
@@ -265,12 +289,17 @@ def disconnect():
     conn.close()
     
     # Update online users
-    if room_code in online_users:
-        online_users[room_code].discard(username)
-        if len(online_users[room_code]) == 0:
-            del online_users[room_code]
-        else:
-            socketio.emit('update_users', {'users': list(online_users[room_code])}, room=room_code)
+    if redis_client:
+        redis_client.srem(f"room:{room_code}:users", username)
+        users = [u.decode('utf-8') for u in redis_client.smembers(f"room:{room_code}:users")]
+        socketio.emit('update_users', {'users': users}, room=room_code)
+    else:
+        if room_code in online_users:
+            online_users[room_code].discard(username)
+            if len(online_users[room_code]) == 0:
+                del online_users[room_code]
+            else:
+                socketio.emit('update_users', {'users': list(online_users[room_code])}, room=room_code)
 
     print(f"{username} left room {room_code}")
 
