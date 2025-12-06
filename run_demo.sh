@@ -41,18 +41,18 @@ echo -e "${GREEN}[2/5] Initializing Database...${NC}"
 export DB_HOST=localhost DB_NAME=postgres DB_USER=postgres DB_PASS=postgres FLASK_SECRET=dev_secret
 export AUTH_SERVICE_URL="http://127.0.0.1:$AUTH_PORT"
 export CHAT_SERVICE_URL="http://127.0.0.1:$CHAT_PORT"
-python3 init_db.py
+./venv/bin/python3 init_db.py
 
 # 3. Start Services
 echo -e "${GREEN}[3/5] Starting Auth Service...${NC}"
 echo -e "${GREEN}[3/5] Starting Auth Service...${NC}"
-PORT=$AUTH_PORT python3 services/auth_service.py > auth_service.log 2>&1 &
+PORT=$AUTH_PORT ./venv/bin/python3 services/auth_service.py > auth_service.log 2>&1 &
 AUTH_PID=$!
 echo "Auth Service started (PID: $AUTH_PID)"
 
 echo -e "${GREEN}[4/5] Starting Chat Service...${NC}"
 echo -e "${GREEN}[4/5] Starting Chat Service...${NC}"
-PORT=$CHAT_PORT python3 services/chat_service.py > chat_service.log 2>&1 &
+PORT=$CHAT_PORT ./venv/bin/python3 services/chat_service.py > chat_service.log 2>&1 &
 CHAT_PID=$!
 echo "Chat Service started (PID: $CHAT_PID)"
 

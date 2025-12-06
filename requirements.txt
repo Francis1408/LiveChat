@@ -19,3 +19,4 @@ PyJWT
 python-socketio[client]
 websocket-client
 redis
+eventlet
